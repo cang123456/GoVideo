@@ -20,6 +20,92 @@
 ## 使用方法
 
 1. 在 `config/config.go` 中配置端口、视频文件夹路径。
+2. **设置管理员密钥（必须）** —— 见下一节，没设置服务会拒绝启动。
+
+---
+
+## 零、管理员密钥（部署到公网必须配）
+
+上传、删除、扫描这三个写操作需要先输入管理员密钥才能执行；
+浏览首页、播放视频、拖动进度条、下载原文件都是公开的，家人打开链接就能看。
+
+**密钥不写在代码里**（代码要进 git，写死等于公开），而是通过环境变量传入：
+
+| 环境变量 | 说明 |
+| --- | --- |
+| `VIDEO_NAS_ADMIN_KEY` | **必填**。管理员密钥，建议 12 位以上，混用大小写字母、数字和符号 |
+| `VIDEO_NAS_TOKEN_SECRET` | 选填。登录 Cookie 的签名密钥；不填会自动从 `VIDEO_NAS_ADMIN_KEY` 派生 |
+| `VIDEO_NAS_VIDEO_ROOT` | 选填。视频目录，覆盖 `config.go` 里的值（本机和服务器路径不同时很有用） |
+| `VIDEO_NAS_PORT` | 选填。监听端口 |
+| `VIDEO_NAS_FFMPEG` / `VIDEO_NAS_FFPROBE` | 选填。ffmpeg / ffprobe 可执行文件路径 |
+
+### Windows CMD 启动示例
+
+```bat
+set VIDEO_NAS_ADMIN_KEY=你的一个长密钥
+video-nas.exe
+```
+
+> ⚠️ **CMD 里千万不要加引号**。`set X="abc"` 会把引号本身也当成值的一部分，
+> 于是实际值是 `"abc"`，你输入 `abc` 永远验证不通过，而且报错信息只会说「密钥不正确」，
+> 极难排查。Linux 那边 `export X='abc'` 的引号是 shell 语法会被吃掉，两边规则不一样。
+
+`set` 只对当前这个窗口有效，关掉窗口就没了。想永久生效（只影响之后新开的窗口）：
+
+```bat
+setx VIDEO_NAS_ADMIN_KEY "你的一个长密钥"
+```
+
+### Windows PowerShell 启动示例
+
+```powershell
+$env:VIDEO_NAS_ADMIN_KEY = "你的一个长密钥"
+.\video-nas.exe
+```
+
+生成一个强随机密钥（PowerShell 一行搞定，输出 24 位）：
+
+```powershell
+-join ((48..57 + 65..90 + 97..122) | Get-Random -Count 24 | ForEach-Object { [char]$_ })
+```
+
+### Linux 启动示例
+
+```bash
+export VIDEO_NAS_ADMIN_KEY='你的一个长密钥'
+export VIDEO_NAS_VIDEO_ROOT='/data/videos'
+./video-nas
+```
+
+### systemd
+
+```ini
+[Service]
+Environment="VIDEO_NAS_ADMIN_KEY=你的一个长密钥"
+Environment="VIDEO_NAS_VIDEO_ROOT=/data/videos"
+ExecStart=/opt/video-nas/video-nas
+```
+
+### pm2
+
+```js
+env: {
+  VIDEO_NAS_ADMIN_KEY: '你的一个长密钥',
+}
+```
+
+### 行为说明
+
+- 验证通过后下发一个**签名 Cookie**（`HttpOnly`，有效期 7 天），期间免重复输入。
+- 删掉 `VIDEO_NAS_ADMIN_KEY` 或换一个值 → 所有已发出的登录凭证立即失效（相当于全员下线）。
+- 连续输错 5 次会锁定 1 分钟，防止暴力猜解。
+- 改密钥后**必须重启进程**才生效。
+- 页面入口：打开 `/upload`，未验证时显示密钥输入框。
+
+### 一定要配 HTTPS
+
+密钥和登录 Cookie 在 HTTP 下是明文传输的，公网部署请务必套上 TLS
+（Let's Encrypt / certbot 免费证书，或走 Cloudflare 代理）。
 
 ---
 

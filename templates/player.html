@@ -65,10 +65,8 @@
                     <div class="actions">
                         <a class="btn btn-secondary" href="{{ if eq $v.FolderPath "/" }}/{{ else }}/folder{{ $v.FolderPath }}{{ end }}">← 返回列表</a>
                         <a class="btn btn-primary" href="/api/download/{{ $v.ID }}">⬇️ 下载原文件</a>
-                        <button class="btn btn-danger" onclick="if(confirm('确定从数据库删除这条记录吗？(通过网页上传的文件将同时被删除，扫描导入的电影库原文件不会被删)')){
-                            fetch('/api/delete/{{ $v.ID }}', {method:'POST'})
-                                .then(r=>r.json()).then(j=>{ if(j.ok){ location.href='/'; } else { alert(j.msg); } });
-                        }">🗑️ 删除记录</button>
+                        <!-- 删除是写操作，需要管理员密钥；具体交互在 app.js 里处理 -->
+                        <button class="btn btn-danger" data-action="delete" data-id="{{ $v.ID }}">🗑️ 删除记录</button>
                     </div>
                 </div>
             </div>

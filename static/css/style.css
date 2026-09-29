@@ -473,6 +473,78 @@ select.sort-select {
 .upload-item .status.ok  { color: #059669; }
 .upload-item .status.err { color: #dc2626; }
 
+/* === 登录门禁（上传 / 删除 / 扫描 需要管理员密钥） === */
+.login-box {
+    max-width: 460px;
+    margin: 40px auto;
+    padding: 44px 32px;
+    background: #fff;
+    border: 1px solid #eef0f3;
+    border-radius: 14px;
+    text-align: center;
+}
+.login-box .big {
+    font-size: 48px;
+    margin-bottom: 14px;
+}
+.login-box .title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 8px;
+}
+.login-box .sub {
+    font-size: 13px;
+    color: #9ca3af;
+    line-height: 1.6;
+    margin-bottom: 24px;
+}
+.login-row {
+    display: flex;
+    gap: 10px;
+}
+.login-row input {
+    flex: 1;
+    min-width: 0;
+    height: 36px;
+    padding: 0 12px;
+    font-size: 14px;
+    font-family: inherit;
+    color: #1f2937;
+    background: #fff;
+    border: 1px solid #dfe3e8;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+}
+.login-row input:focus {
+    border-color: #2c5be5;
+    box-shadow: 0 0 0 3px rgba(44, 91, 229, .12);
+}
+.login-msg {
+    margin-top: 14px;
+    min-height: 18px;
+    font-size: 13px;
+    color: #dc2626;
+}
+.logout-row {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid #eef0f3;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.logout-row .hint {
+    font-size: 13px;
+    color: #9ca3af;
+}
+.btn:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
 /* === 错误页 === */
 .error-page {
     padding: 80px 20px;

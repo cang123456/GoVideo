@@ -1,0 +1,87 @@
+# ============================================================
+# nginx 反代配置示例 —— 本地视频 NAS (video-nas)
+#
+# 直接放到 nginx 的 conf.d/ 或 sites-enabled/ 下，改掉
+# server_name 和 proxy_pass 的地址即可。
+#
+# 关键点：本项目的上传是「一次性把整个视频文件 POST 上来」，
+# 而且 Go 侧收完文件后还会同步跑 ffprobe + ffmpeg 截封面，
+# 所以下面三组指令必须显式放宽，否则默认值一定拦不住大视频。
+# ============================================================
+
+server {
+    listen       80;
+    server_name  nas.local;          # 改成你的域名或局域网 IP
+
+    # ---------- 【必改 1】请求体大小限制 ----------
+    # nginx 默认只有 1m，视频必然超出 → 直接回 413，
+    # 请求根本到不了后面的 Go 服务。0 表示不限制。
+    client_max_body_size 0;
+
+    # 客户端上传大文件时，两次 TCP 读之间的间隔上限，默认 60s。
+    # 手机 / WiFi 传大文件时适当放大。
+    client_body_timeout  600s;
+
+    # 如果开了 client_max_body_size 的限制、且 request buffering 打开，
+    # nginx 会把请求体落到这个目录，务必确保所在盘空间足够。
+    # client_body_temp_path /var/lib/nginx/body 1 2;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;   # 改成 Go 服务实际地址
+
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+
+        # 【重要】程序跑在 nginx 后面时，Go 侧看到的连接是明文 HTTP
+        # （c.Request.TLS 为 nil），只有靠这个头才知道浏览器那一侧其实是 HTTPS。
+        # 登录 Cookie 是否加 Secure 属性就取决于它 —— 少了这一行，
+        # Cookie 会退化成非 Secure，虽然还能用，但安全性下降。
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # ---------- 【必改 2】不要缓冲请求体 ----------
+        # 默认 on：nginx 会把整个视频先完整写进自己的临时目录，
+        # 收完才转发给 Go。空间不够或中途断连就直接失败，
+        # 浏览器进度条还会先跑满 100% 然后长时间卡住。
+        # 关掉后是边收边转发，省一次全量落盘。
+        proxy_request_buffering off;
+
+        # ---------- 【必改 3】上游响应超时 ----------
+        # 默认 60s。Go 的 APIUpload 在返回前会同步执行
+        # ffprobe（超时 30s）+ ffmpeg 截封面（超时 60s），
+        # 这段时间一个字节都不往 nginx 写，60 秒一到就 504。
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        send_timeout       3600s;
+
+        # 响应也别缓冲：/api/stream 靠 Range 请求拖进度条，
+        # 不缓冲才能边下边播、快速 seek。
+        proxy_buffering off;
+
+        proxy_cache off;
+    }
+
+    # 静态资源和封面图体积小，单独走一条带缓存的分支。
+    location ~ ^/(static|thumb)/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_buffering on;
+        expires 7d;
+    }
+}
+
+# ------------------------------------------------------------
+# 排查时看这两个日志：
+#   tail -f /var/log/nginx/error.log
+# 常见关键字：
+#   "client intended to send too large body"  → client_max_body_size 太小
+#   "upstream timed out" / 504                → proxy_read_timeout 太小
+#   "no space left on device"                 → client_body_temp_path 所在盘满了
+#
+# 快速验证（在 nginx 所在机器上执行，用个 20MB 的测试文件）：
+#   curl -v -F "file=@test_20m.mp4" http://127.0.0.1/api/upload
+# 直连 8080 也测一次对比：
+#   curl -v -F "file=@test_20m.mp4" http://127.0.0.1:8080/api/upload
+# ------------------------------------------------------------

@@ -22,6 +22,10 @@ type Handler struct {
 	Scanner  *store.Scanner
 	Uploader *store.Uploader
 	Thumb    *store.Thumbnailer
+
+	// authGuard 记录登录失败次数，用于暴力破解防护。
+	// 零值即可用，不需要额外初始化（见 auth.go）。
+	authGuard authGuard
 }
 
 // ---- 通用工具方法 ----

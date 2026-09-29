@@ -35,13 +35,35 @@
 
         <div class="content">
             <div class="upload-page">
-                <div id="dropZone" class="drop-zone">
-                    <div class="big">📥</div>
-                    <div class="title">拖拽视频文件到这里</div>
-                    <div class="sub">或者点击框内任意位置选择文件 · 支持 mp4 / mkv / avi / mov 等常见格式</div>
+
+                <!-- 未通过验证时只显示这一块 -->
+                <div id="loginBox" class="login-box" style="display:none">
+                    <div class="big">🔒</div>
+                    <div class="title">需要管理员密钥</div>
+                    <div class="sub">上传 / 删除 / 扫描操作受保护 · 验证通过后 7 天内免重复输入</div>
+                    <div class="login-row">
+                        <input id="adminKeyInput" type="password" placeholder="请输入管理员密钥"
+                               autocomplete="current-password" spellcheck="false">
+                        <button id="loginBtn" class="btn btn-primary">验证</button>
+                    </div>
+                    <div id="loginMsg" class="login-msg"></div>
                 </div>
-                <input id="fileInput" type="file" accept="video/*,.mp4,.mkv,.avi,.mov,.wmv,.flv,.webm,.m4v,.rmvb,.rm" multiple style="display:none;">
-                <div id="uploadList" class="upload-list"></div>
+
+                <!-- 验证通过后才显示上传区 -->
+                <div id="uploadZone" style="display:none">
+                    <div id="dropZone" class="drop-zone">
+                        <div class="big">📥</div>
+                        <div class="title">拖拽视频文件到这里</div>
+                        <div class="sub">或者点击框内任意位置选择文件 · 支持 mp4 / mkv / avi / mov 等常见格式</div>
+                    </div>
+                    <input id="fileInput" type="file" accept="video/*,.mp4,.mkv,.avi,.mov,.wmv,.flv,.webm,.m4v,.rmvb,.rm" multiple style="display:none;">
+                    <div id="uploadList" class="upload-list"></div>
+                    <div class="logout-row">
+                        <span class="hint">已通过管理员验证</span>
+                        <button id="logoutBtn" class="btn btn-secondary">退出登录</button>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>

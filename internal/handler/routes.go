@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -139,6 +140,7 @@ func (h *Handler) RenderUpload(c *gin.Context) {
 // ---- API 接口（返回 JSON，不是页面） ----
 
 // APIScan 触发一次扫描（POST /api/scan）。
+// 需要管理员密钥，路由上挂了 RequireAdmin 中间件。
 func (h *Handler) APIScan(c *gin.Context) {
 	if h.Scanner.IsRunning() {
 		c.JSON(http.StatusOK, gin.H{"status": "already_running"})
@@ -146,11 +148,18 @@ func (h *Handler) APIScan(c *gin.Context) {
 	}
 	// 扫描可能很慢，放 goroutine 里异步跑，接口立即返回
 	go func() {
+		// 注意：这里已经不在请求生命周期内了，绝对不能再碰 c ——
+		// gin 的 Context 不是并发安全的，而且响应早就发出去了。
+		// （原实现在出错分支里调用 c.JSON(0, ...)，状态码 0 会让
+		//    net/http 直接 panic，把整个进程带崩，这里改成只打日志。）
 		res, err := h.Scanner.Run()
 		if err != nil {
-			c.JSON(0, gin.H{}) // 异步拿不到 c 了，这里只占位不影响
-			_ = res
+			log.Println("[扫描] 出错：", err)
 			return
+		}
+		if res != nil {
+			log.Printf("[扫描] 完成：新增 %d 个，跳过 %d 个，失败 %d 个\n",
+				res.Added, res.Skipped, res.Failed)
 		}
 	}()
 	c.JSON(http.StatusOK, gin.H{"status": "started"})

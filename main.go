@@ -20,6 +20,11 @@ import (
 func main() {
 	// 1. 加载配置
 	cfg := config.Default()
+	// 鉴权相关配置有问题就直接拒绝启动：这个服务在公网上跑，
+	// 与其带着空密钥静静地上线裸奔，不如立刻停下来让人看到原因。
+	if err := cfg.Validate(); err != nil {
+		log.Fatalln("配置检查未通过：", err)
+	}
 	fmt.Println("========== 本地视频 NAS 启动中 ==========")
 	fmt.Println("  端口        :", cfg.Port)
 	fmt.Println("  视频目录    :", cfg.VideoRoot)
@@ -28,6 +33,8 @@ func main() {
 	fmt.Println("  ffmpeg 路径 :", cfg.FFmpegPath)
 	fmt.Println("  ffprobe路径 :", cfg.FFprobePath)
 	fmt.Println("  启动即扫描  :", cfg.ScanOnStart)
+	fmt.Println("  管理员密钥  :", cfg.MaskedAdminKey(), "（来自环境变量 VIDEO_NAS_ADMIN_KEY）")
+	fmt.Println("  受保护接口  : /api/upload, /api/scan, /api/delete/:id")
 	fmt.Println("=========================================")
 
 	// 2. 确保 data 系列目录存在（视频根目录、封面目录）
